@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Copyright Logically Magic Inc. <hello@logicallymagic.com>
+# SPDX-FileCopyrightText: Copyright Hamid Jahanzad <Hamid@Jahanzad.com>
+# SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
+# SPDX-License-Identifier: Apache-2.0
+
+Source: sentin8
+Section: utils
+Priority: optional
+Maintainer: Sentin8 Platform Engineering <platform@sentin8.local>
+Build-Depends: debhelper (>= 13), cargo, rustc, libssl-dev, pkg-config
+Standards-Version: 4.6.0
+Homepage: https://github.com/Sentin8/sentin8
+Vcs-Git: https://github.com/Sentin8/sentin8.git
+
+Package: sentin8-common
+Architecture: all
+Description: Sentin8 platform shared data
+ Sentin8 platform shared data — platform SQL, vertical-registry.json,
+ catalog.json, and Flutter web assets (dash, auth-ui).
+
+Package: sentin8
+Architecture: any
+Multi-Arch: same
+Depends: sentin8-common, ${shlibs:Depends}, ${misc:Depends}
+Recommends: postgresql-18, valkey-server
+Description: Sentin8 platform runtime
+ Sentin8 platform runtime — all backend service binaries (auth, bff, db,
+ storage, bus, sys, app, acme, captain, proxy, web, post, stat, func,
+ func, cron, flow), systemd unit, and logrotate config.
+ .
+ PostgreSQL 18 and Valkey are external URL-addressed dependencies
+ (DATABASE_URL / VALKEY_URL). They may be local (system packages) or remote
+ (managed cloud). This package Recommends (not Depends) the system packages
+ so remote hosting works.
+
+Package: sentin8-dev
+Architecture: all
+Description: Sentin8 build kit
+ Sentin8 build kit — sentin8-cli, vendored crate local-registry,
+ sentin8-build-info crate, Rust SDKs, and cargo config template.
+ .
+ Enables verticals (bank8, hotel8, etc.) to build their binaries against
+ the sentin8 crate registry without the sentin8 source repo.
+
+Package: sentin8-postgres-config
+Architecture: all
+Depends: postgresql-18
+Description: PostgreSQL certificate-identity configuration for Sentin8
+ PostgreSQL certificate identity — the TLS-only pg_hba.conf and
+ the pgm identity map for Sentin8's per-service certificate-
+ authenticated database roles. Applies to any local or remote
+ PostgreSQL 18 host.

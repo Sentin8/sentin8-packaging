@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright Logically Magic Inc. <hello@logicallymagic.com>
+# SPDX-FileCopyrightText: Copyright Hamid Jahanzad <Hamid@Jahanzad.com>
+# SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
+# SPDX-License-Identifier: Apache-2.0
+# -*- makefile -*-
+# debian/rules for sentin8 — builds all Rust binaries + vendored registry.
+#
+# See sentin8/design/sentin8-debian-packaging-design.md §9.
+#
+# This file runs `cargo build --workspace --release` once, then dh_install
+# places each binary according to the per-package .install files. The
+# `sentin8-dev` package additionally runs `cargo vendor` + `cargo
+# local-registry` to produce the vendored crate registry.
+
+export DH_OPTIONS = --parallel
+export CARGO_HOME = $(CURDIR)/.cargo-home
+
+# Build hash — set from the package version + timestamp (no git required).
+export SENTIN8_BUILD_HASH := $(shell date +%y%m%d-%H%M)
+# Git short hash — the packaged source revision when the packaging tree
+# carries its git history (vendored/exported builds stay unstamped;
+# sentin8-build-info omits the +hash part rather than stamping a lie).
+# Release profile always — the package ships release binaries only.
+export SENTIN8_GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null)
+export SENTIN8_BUILD_PROFILE := release
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Build all sentin8 Rust binaries (release).
+	cargo build --workspace --release
+	# Build Flutter web apps (dash, auth-ui) — skip if Flutter is not installed.
+	-$(MAKE) -C $(CURDIR) build-flutter
+
+override_dh_auto_install:
+	# Place binaries into the package staging dirs via .install files.
+	dh_install
+
+	# ── sentin8-dev: produce the vendored crate local-registry ──
+	# This is the build kit that lets verticals build without sentin8 source.
+	mkdir -p debian/sentin8-dev/usr/share/sentin8/registry
+	# Vendor all workspace dependencies into the registry.
+	cargo vendor --workspace --versioned-dirs \
+		debian/sentin8-dev/usr/share/sentin8/registry/vendor
+	# Build the local-registry index from the vendored crates.
+	cargo local-registry \
+		--git debian/sentin8-dev/usr/share/sentin8/registry
+	# Also vendor sentin8's own crates (they're path deps, not on crates.io).
+	# Copy each sentin8 crate as a .crate tarball into the registry.
+	@for crate in crates/* sdk/rust/sentin8 sdk/rust/sentin8/auth sdk/rust/sentin8/fapiclient; do \
+		[ -f "$$crate/Cargo.toml" ] || continue; \
+		(cd "$$crate" && cargo package --allow-dirty --no-verify 2>/dev/null \
+			&& cp *.crate ../../../debian/sentin8-dev/usr/share/sentin8/registry/ 2>/dev/null) || true; \
+	done
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf debian/sentin8-dev/usr/share/sentin8/registry
+	rm -rf $(CARGO_HOME)

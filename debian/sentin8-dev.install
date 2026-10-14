@@ -1,0 +1,5 @@
+usr/bin/sentin8-cli
+usr/share/sentin8/registry/
+usr/share/sentin8/crates/sentin8-build-info/
+usr/share/sentin8/crates/sdk/rust/sentin8/
+usr/share/sentin8/cargo-config.toml

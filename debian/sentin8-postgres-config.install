@@ -1,0 +1,2 @@
+etc/postgresql/18/main/pg_hba.conf
+etc/postgresql/18/main/pg_ident.conf

@@ -1,0 +1,9 @@
+# Local build outputs
+/out/
+/tmp/
+*.deb
+*.build
+*.changes
+
+# Local environment
+/.env

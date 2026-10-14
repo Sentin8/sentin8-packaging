@@ -1,0 +1,16 @@
+usr/bin/sentin8-auth
+usr/bin/sentin8-bff
+usr/bin/sentin8-db
+usr/bin/sentin8-storage
+usr/bin/sentin8-bus
+usr/bin/sentin8-sys
+usr/bin/sentin8-app
+usr/bin/sentin8-acme
+usr/bin/sentin8-captain
+usr/bin/sentin8-proxy
+usr/bin/sentin8-web
+usr/bin/sentin8-post
+usr/bin/sentin8-stat
+usr/bin/sentin8-func
+usr/bin/sentin8-cron
+usr/bin/sentin8-flow

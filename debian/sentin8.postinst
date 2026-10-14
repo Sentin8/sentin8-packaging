@@ -1,0 +1,64 @@
+#!/bin/sh
+# postinst — create the sentin8 system user, directories, and enable systemd unit.
+# See sentin8/design/sentin8-debian-packaging-design.md §8, §9.
+
+set -e
+
+case "$1" in
+    configure)
+        # Create the sentin8 system user and group (idempotent).
+        if ! getent group sentin8 >/dev/null 2>&1; then
+            addgroup --system sentin8
+        fi
+        if ! getent passwd sentin8 >/dev/null 2>&1; then
+            adduser --system --ingroup sentin8 --home /var/lib/sentin8 \
+                --no-create-home --shell /usr/sbin/nologin sentin8
+        fi
+
+        # Create FHS directories and set ownership.
+        install -d -o sentin8 -g sentin8 -m 0755 /etc/sentin8
+        install -d -o sentin8 -g sentin8 -m 0755 /etc/sentin8/verticals
+        install -d -o sentin8 -g sentin8 -m 0755 /var/lib/sentin8
+        install -d -o sentin8 -g sentin8 -m 0755 /var/lib/sentin8/tls
+        install -d -o sentin8 -g sentin8 -m 0755 /var/lib/sentin8/storage
+        install -d -o sentin8 -g sentin8 -m 0755 /var/lib/sentin8/captain
+        install -d -o sentin8 -g sentin8 -m 0755 /var/log/sentin8
+        # /run/sentin8 is created by systemd's RuntimeDirectory=sentin8.
+
+        # Install default config if not present (conffile).
+        if [ ! -f /etc/sentin8/sentin8.env ]; then
+            if [ -f /usr/share/sentin8/sentin8.env.example ]; then
+                cp /usr/share/sentin8/sentin8.env.example /etc/sentin8/sentin8.env
+                chown sentin8:sentin8 /etc/sentin8/sentin8.env
+                chmod 0640 /etc/sentin8/sentin8.env
+            fi
+        fi
+
+        # Install logrotate config (shipped by the package as a conffile).
+        # The logrotate config is installed by dh_installlogrotate via the
+        # sentin8.logrotate file in debian/. If it's not there (manual install),
+        # fall back to copying from /usr/share/sentin8/.
+        if [ ! -f /etc/logrotate.d/sentin8 ]; then
+            if [ -f /usr/share/sentin8/logrotate.conf ]; then
+                install -m 0644 /usr/share/sentin8/logrotate.conf /etc/logrotate.d/sentin8
+            fi
+        fi
+
+        # Reload systemd to pick up the captain unit.
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload || true
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+# dh_installdeb will insert shell snippets here.
+
+exit 0

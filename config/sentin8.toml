@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright Logically Magic Inc. <hello@logicallymagic.com>
+# SPDX-FileCopyrightText: Copyright Hamid Jahanzad <Hamid@Jahanzad.com>
+# SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
+# SPDX-License-Identifier: Apache-2.0
+
+# Sentin8 platform configuration — optional TOML override layer.
+#
+# Installed to /etc/sentin8/sentin8.toml (packaged) or read from the path
+# pointed to by SENTIN8_CONFIG_DIR. This file is OPTIONAL — if absent,
+# sentin8-config falls back to environment variables only.
+#
+# Layer order: TOML file (base) → environment variables (override).
+# Env vars (SENTIN8_*) always win over values in this file.
+#
+# See sentin8/design/sentin8-debian-packaging-design.md §7.
+
+# Root domain — all Sentin8 domains derive from this.
+# Env var: SENTIN8_DOMAIN
+domain = "sentin8.local"
+
+# ── FHS paths (optional overrides) ───────────────────────────────────
+# These match the sentin8-config crate defaults; uncomment to override.
+#
+# config_dir = "/etc/sentin8"
+# state_dir = "/var/lib/sentin8"
+# log_dir = "/var/log/sentin8"
+# run_dir = "/run/sentin8"

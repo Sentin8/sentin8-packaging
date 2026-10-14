@@ -1,0 +1,31 @@
+[Unit]
+Description=Sentin8 platform supervisor
+Documentation=https://github.com/Sentin8/sentin8
+After=network-online.target
+Wants=network-online.target postgresql.service valkey-server.service
+# Wants (not Requires) so that remote DB/Valkey hosting does not block
+# local startup. PostgreSQL 18 and Valkey are URL-addressed dependencies.
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/sentin8/sentin8.env
+ExecStart=/usr/bin/sentin8-cli captain start
+ExecStop=/usr/bin/sentin8-cli captain stop
+Restart=on-failure
+RestartSec=5s
+User=sentin8
+Group=sentin8
+
+# Private tmp and protect system to harden the service.
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+
+# FHS paths owned by the sentin8 user.
+RuntimeDirectory=sentin8
+StateDirectory=sentin8
+LogsDirectory=sentin8
+
+[Install]
+WantedBy=multi-user.target

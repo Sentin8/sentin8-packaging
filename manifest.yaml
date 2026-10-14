@@ -1,0 +1,127 @@
+# SPDX-FileCopyrightText: Copyright Logically Magic Inc. <hello@logicallymagic.com>
+# SPDX-FileCopyrightText: Copyright Hamid Jahanzad <Hamid@Jahanzad.com>
+# SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
+# SPDX-License-Identifier: Apache-2.0
+
+# Sentin8 packaging manifest — single source of truth for package split,
+# file lists, FHS paths, systemd unit, and post-install steps.
+#
+# Consumed by debian/rules (and a future RPM .spec). See
+# sentin8/design/sentin8-debian-packaging-design.md §9.1.
+#
+# Each package declares its arch, dependencies, and the files it installs.
+# The debian/rules file reads this to generate per-package .install files
+# and the control file stanzas.
+
+packages:
+  - name: sentin8-common
+    arch: all
+    description: |
+      Sentin8 platform shared data — platform SQL, vertical-registry.json,
+      catalog.json, Flutter web assets (dash, auth-ui).
+    depends: []
+    files:
+      - src: infra/postgres/init/
+        dst: /usr/share/sentin8/sql/
+      - src: vertical-registry.json
+        dst: /usr/share/sentin8/vertical-registry.json
+      - src: services/catalog.json
+        dst: /usr/share/sentin8/catalog.json
+      # Flutter web assets (built by make build-flutter):
+      - src: apps/dash/build/web/
+        dst: /usr/share/sentin8/web/dash/
+      - src: apps/auth-ui/build/web/
+        dst: /usr/share/sentin8/web/auth-ui/
+
+  - name: sentin8
+    arch: any
+    multi_arch: same
+    description: |
+      Sentin8 platform runtime — all backend service binaries, systemd unit,
+      and logrotate config. Depends on sentin8-common for shared data.
+    depends:
+      - sentin8-common
+    recommends:
+      - postgresql-18
+      - valkey-server
+    binaries:
+      # Built by `cargo build --workspace --release` (target/release/):
+      - sentin8-auth
+      - sentin8-bff
+      - sentin8-db
+      - sentin8-storage
+      - sentin8-bus
+      - sentin8-sys
+      - sentin8-app
+      - sentin8-acme
+      - sentin8-captain
+      - sentin8-proxy
+      - sentin8-web
+      - sentin8-post
+      - sentin8-stat
+      - sentin8-func
+      - sentin8-cron
+      - sentin8-flow
+    config_files:
+      - src: packaging/config/sentin8.env
+        dst: /etc/sentin8/sentin8.env
+    systemd_units:
+      - sentin8-captain.service
+    logrotate: packaging/debian/sentin8.logrotate
+
+  - name: sentin8-dev
+    arch: all
+    description: |
+      Sentin8 build kit — sentin8-cli, vendored crate local-registry,
+      sentin8-build-info crate, Rust SDKs, and cargo config template.
+      Enables verticals (bank8, hotel8, etc.) to build their binaries
+      without the sentin8 source repo.
+    depends: []
+    build_produces:
+      # Produced by `cargo vendor` + `cargo local-registry` in rules:
+      - registry: /usr/share/sentin8/registry/
+    files:
+      # sentin8-cli binary:
+      - src: target/release/sentin8-cli
+        dst: /usr/bin/sentin8-cli
+      # sentin8-build-info crate source (for [patch] builds):
+      - src: crates/sentin8-build-info/
+        dst: /usr/share/sentin8/crates/sentin8-build-info/
+      # Rust SDKs (sources, consumed by vertical builds):
+      - src: sdk/rust/sentin8/
+        dst: /usr/share/sentin8/crates/sdk/rust/sentin8/
+      # Cargo config template (points at the vendored registry):
+      - src: packaging/config/cargo-config.toml
+        dst: /usr/share/sentin8/cargo-config.toml
+
+  - name: sentin8-postgres-config
+    arch: all
+    description: |
+      PostgreSQL certificate-identity configuration — the TLS-only
+      pg_hba.conf and the pgm identity-map seed for Sentin8's per-service
+      certificate-authenticated database roles (group DESIGN.md §3.2).
+      Applies to any local or remote PostgreSQL 18 host.
+    depends:
+      - postgresql-18
+    files:
+      - src: packaging/config/postgres-pg-hba.conf
+        dst: /etc/postgresql/18/main/pg_hba.conf
+      - src: packaging/config/postgres-pg-ident.conf
+        dst: /etc/postgresql/18/main/pg_ident.conf
+
+# ── FHS paths (shared conventions) ────────────────────────────────────
+fhs:
+  config_dir: /etc/sentin8
+  state_dir: /var/lib/sentin8
+  log_dir: /var/log/sentin8
+  run_dir: /run/sentin8
+  share_dir: /usr/share/sentin8
+  tls_dir: /var/lib/sentin8/tls
+  storage_dir: /var/lib/sentin8/storage
+
+# ── System user ────────────────────────────────────────────────────────
+system_user:
+  name: sentin8
+  group: sentin8
+  shell: /usr/sbin/nologin
+  home: /var/lib/sentin8
