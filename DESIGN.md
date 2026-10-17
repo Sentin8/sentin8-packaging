@@ -1,4 +1,4 @@
-# DESIGN.md: sentin8-packaging — Detailed Design Document
+# sentin8-packaging — Detailed Design Document
 
 > Wire-level construction of the Debian split. The overview lives in
 > `README.md`; the operator/business framing in `BUSINESS.md`.

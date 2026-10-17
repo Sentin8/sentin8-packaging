@@ -1,4 +1,4 @@
-# BUSINESS.md: sentin8-packaging — Business Requirements & Functionality
+# sentin8-packaging — Business Requirements & Functionality
 
 > Audience: product owners, business analysts, and anyone evaluating what
 > sentin8-packaging **does for the business**. For the overview read
