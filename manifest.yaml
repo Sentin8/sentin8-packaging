@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
 # SPDX-License-Identifier: Apache-2.0
 
-# Sentin8 packaging manifest — single source of truth for package split,
+# Sentin8 packaging manifest - single source of truth for package split,
 # file lists, FHS paths, systemd unit, and post-install steps.
 #
 # Consumed by debian/rules (and a future RPM .spec). See
@@ -17,7 +17,7 @@ packages:
   - name: sentin8-common
     arch: all
     description: |
-      Sentin8 platform shared data — platform SQL, vertical-registry.json,
+      Sentin8 platform shared data - platform SQL, vertical-registry.json,
       catalog.json, Flutter web assets (dash, auth-ui).
     depends: []
     files:
@@ -37,7 +37,7 @@ packages:
     arch: any
     multi_arch: same
     description: |
-      Sentin8 platform runtime — all backend service binaries, systemd unit,
+      Sentin8 platform runtime - all backend service binaries, systemd unit,
       and logrotate config. Depends on sentin8-common for shared data.
     depends:
       - sentin8-common
@@ -72,7 +72,7 @@ packages:
   - name: sentin8-dev
     arch: all
     description: |
-      Sentin8 build kit — sentin8-cli, vendored crate local-registry,
+      Sentin8 build kit - sentin8-cli, vendored crate local-registry,
       sentin8-build-info crate, Rust SDKs, and cargo config template.
       Enables verticals (bank8, hotel8, etc.) to build their binaries
       without the sentin8 source repo.
@@ -97,7 +97,7 @@ packages:
   - name: sentin8-postgres-config
     arch: all
     description: |
-      PostgreSQL certificate-identity configuration — the TLS-only
+      PostgreSQL certificate-identity configuration - the TLS-only
       pg_hba.conf and the pgm identity-map seed for Sentin8's per-service
       certificate-authenticated database roles (group DESIGN.md §3.2).
       Applies to any local or remote PostgreSQL 18 host.

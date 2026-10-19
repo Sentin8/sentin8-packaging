@@ -1,4 +1,4 @@
-# sentin8-packaging — Detailed Design Document
+# sentin8-packaging - Detailed Design Document
 
 > Wire-level construction of the Debian split. The overview lives in
 > `README.md`; the operator/business framing in `BUSINESS.md`.
@@ -13,10 +13,10 @@ unit) every other repo's runtime assumptions assume.
 
 Two packaging models exist by design:
 
-- **Dev/source installs** — repo checkouts with per-repo `target/`
+- **Dev/source installs** - repo checkouts with per-repo `target/`
   binaries (the split's source-of-truth model; captain resolves
   binaries via `SENTIN8_CAPTAIN_BINARY_PREFIX` colon chains).
-- **Deb installs** — FHS-fixed locations (`/usr/bin/`,
+- **Deb installs** - FHS-fixed locations (`/usr/bin/`,
   `/usr/share/sentin8/`, `/etc/sentin8/`, `/var/{lib,log}/sentin8/`)
   driven by `manifest.yaml` (the single source of truth for the split).
 
@@ -36,9 +36,9 @@ graph TD
 
 | Package | arch | Depends | Contents |
 |---|---|---|---|
-| `sentin8-common` | all | — | Platform SQL, `vertical-registry.json`, `catalog.json`, Flutter web assets (dash, auth-ui) |
+| `sentin8-common` | all | - | Platform SQL, `vertical-registry.json`, `catalog.json`, Flutter web assets (dash, auth-ui) |
 | `sentin8` | any | `sentin8-common` | All service binaries, `/etc/sentin8/sentin8.env` template, `sentin8-captain.service`, logrotate |
-| `sentin8-dev` | all | — | `sentin8-cli` binary, vendored crate local-registry, build-info crate source, SDK sources (consumed by vertical builds), cargo-config template |
+| `sentin8-dev` | all | - | `sentin8-cli` binary, vendored crate local-registry, build-info crate source, SDK sources (consumed by vertical builds), cargo-config template |
 | `sentin8-postgres-config` | all | `postgresql-18` | TLS-only `pg_hba.conf` + the `pgm` certificate-identity map |
 
 FHS contract (manifest `fhs:` block): config `/etc/sentin8`, state
@@ -49,13 +49,13 @@ FHS contract (manifest `fhs:` block): config `/etc/sentin8`, state
 ## 3. Build & Delivery Mechanics
 
 - `debian/rules` reads `manifest.yaml` and generates per-package
-  `.install` files + control stanzas — the split is DATA, never
+  `.install` files + control stanzas - the split is DATA, never
   hand-maintained install lists.
 - `sentin8-dev`'s registry is produced by `cargo vendor` +
   `cargo local-registry` during the build (`build_produces:`), so
   verticals build offline against pinned versions.
 - Sources gathered across the group: per-repo `target/release` binaries
-  (the split layout — no single workspace target dir), Flutter builds
+  (the split layout - no single workspace target dir), Flutter builds
   from the app repos, registry JSONs from the groups.
 - `sentin8-captain.service` is THE fleet unit: one supervisor per
   machine; per-service units do not exist (captain owns process
@@ -73,15 +73,15 @@ The deb is what an OpenTofu module installs on a provisioned machine:
    the env file and starts captain against the shared Valkey registry.
 4. Captain boots, reads the same env contract the operator gave the base
    machine, honors placement (`SENTIN8_CAPTAIN_EDGE_IP` when this is the
-   edge), and joins the fleet — the registry is the only rendezvous.
+   edge), and joins the fleet - the registry is the only rendezvous.
 
 ## 5. Invariants
 
-1. `manifest.yaml` is the single source of truth — install files and
+1. `manifest.yaml` is the single source of truth - install files and
    control stanzas are generated, never hand-edited.
 2. No per-service systemd units; captain is the one unit.
 3. The vendored registry pins reproduce the SDK tag the platform ships.
-4. Secrets are never shipped — `/etc/sentin8/sentin8.env` is a template;
+4. Secrets are never shipped - `/etc/sentin8/sentin8.env` is a template;
    real values land at provision time (module-owned).
 5. FHS paths are declared once and consumed by every repo's runtime
    defaults.

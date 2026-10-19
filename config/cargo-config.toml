@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: Copyright Contributors to the Sentin8:Packaging
 # SPDX-License-Identifier: Apache-2.0
 
-# Cargo config template — points at the sentin8-dev vendored local-registry.
+# Cargo config template - points at the sentin8-dev vendored local-registry.
 # Verticals copy this to their .cargo/config.toml to resolve sentin8-* crates
 # from /usr/share/sentin8/registry without the sentin8 source repo or network.
 #
