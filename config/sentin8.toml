@@ -16,7 +16,7 @@
 
 # Root domain - all Sentin8 domains derive from this.
 # Env var: SENTIN8_DOMAIN
-domain = "sentin8.local"
+domain = "local.sentin8.dev"
 
 # ── FHS paths (optional overrides) ───────────────────────────────────
 # These match the sentin8-config crate defaults; uncomment to override.
