@@ -27,5 +27,5 @@ lint: manifest-check ## static checks
 	@test -f debian/control || { echo "ERROR: debian/control missing" >&2; exit 1; }
 	@test -f manifest.yaml || { echo "ERROR: manifest.yaml missing" >&2; exit 1; }
 
-clean: ## packaging is source-only — nothing to clean
-	@echo "nothing to clean"
+clean: ## remove .run .run/logs .tmp (packaging is source-only)
+	@rm -rf .run .run/logs .tmp
