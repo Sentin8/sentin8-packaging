@@ -98,7 +98,7 @@ The deb is what an OpenTofu module installs on a provisioned machine:
 
 - `sentin8-cli` currently installs inside `sentin8-dev`; an
   operator-plane move into `sentin8` (every host gets the CLI) tracks
-  with the packaging backlog (SD-7) once deb paths are re-pointed at the
+  with the packaged install once deb paths are re-pointed at the
   split layout.
 - RPM equivalence is deferred until a deployment targets it.
 

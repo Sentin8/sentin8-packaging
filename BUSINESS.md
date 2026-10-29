@@ -118,7 +118,7 @@ bring-up contract consumed by the OpenTofu modules.
 ## 10. Open Business Questions
 
 - Moving `sentin8-cli` from the dev kit into the runtime package
-  (operators on every host) tracks the packaging backlog (SD-7).
+  (operators on every host) tracks the packaged-install rollout.
 - RPM/deb-remote publishing cadence is a deployment decision until a
   consumer demands it.
 
