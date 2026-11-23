@@ -75,6 +75,97 @@ The deb is what an OpenTofu module installs on a provisioned machine:
    machine, honors placement (`SENTIN8_CAPTAIN_EDGE_IP` when this is the
    edge), and joins the fleet - the registry is the only rendezvous.
 
+### 4.1 Ingress bind privilege (PORTBIND-1)
+
+The ingress is the only process on a fleet machine that binds a port
+below 1024: `sentin8-proxy` holds `:443` (the L4/L7 ingress) and, when
+external issuance is enabled, `:80` (the HTTP-01 challenge listener).
+Both run as the unprivileged `sentin8` system user, so the listen needs
+`CAP_NET_BIND_SERVICE` granted at process level.
+
+**File capabilities are not the mechanism.** `setcap cap_net_bind_service=+ep`
+on the binary cannot work in the packaged deployment:
+
+1. The unit sets `NoNewPrivileges=yes`. Per `prctl(2)`, with
+   `no_new_privs` set "file capabilities will not add to the permitted
+   capability set" - the xattr is silently ignored at `execve`.
+2. `ProtectSystem=full` makes `/usr` read-only at runtime, so the xattr
+   could only be applied at install time, never by a service.
+3. Each `dpkg` upgrade replaces the binary inode; xattrs do not survive
+   replacement.
+
+**The mechanism is ambient capabilities on the unit.** Captain spawns
+its children with `fork`+`exec` (`catalog.rs`), and an ambient capability
+survives `execve` of an unprivileged binary, so a capability granted to
+captain's ambient set reaches the proxy child. The chain is
+`sentin8-cli` → captain → proxy; every hop is unprivileged, so the
+ambient set is preserved end to end.
+
+```ini
+[Service]
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+```
+
+`CapabilityBoundingSet` is required, not optional: ambient capabilities
+must also be within the bounding set. Narrowing the set to
+`CAP_NET_BIND_SERVICE` alone reduces exposure relative to the unit's
+previous unrestricted default, and ambient grants are compatible with
+`NoNewPrivileges=yes` (they are not file capabilities and are not added
+at `execve`). One declaration covers both listeners - the capability is
+per-port-range, not per-port.
+
+```mermaid
+graph LR
+    SD["systemd unit<br/>AmbientCapabilities=CAP_NET_BIND_SERVICE"] --> CLI["sentin8-cli captain start<br/>User=sentin8"]
+    CLI -- "exec (ambient survives)" --> CAP["sentin8-captain<br/>CapAmb includes net_bind_service"]
+    CAP -- "fork + exec (ambient survives)" --> PX["sentin8-proxy<br/>User=sentin8"]
+    PX -- "bind :443 (and :80 when enabled)" --> OK["listener up, no root"]
+    FC["setcap on /usr/bin/sentin8-proxy"] -.->|"ignored: NoNewPrivileges=yes"| PX
+```
+
+**Un-packaged (dev/source) installs use a host policy instead.** A
+source checkout spawns through `SENTIN8_CAPTAIN_BINARY_PREFIX` or
+`cargo run`; cargo writes a fresh inode per build, so no per-file xattr
+survives, and a `cargo run` path cannot be pre-cap'd at all. The correct
+dev mechanism is machine policy, which is inode-independent:
+
+```bash
+sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+# persist across reboots:
+echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-sentin8-ingress.conf
+```
+
+`make ingress-port` performs exactly these two steps for the active
+configuration (it derives the value from `.env` and is a no-op when the
+host already allows the port). It stays an explicit target rather than an
+implicit step of `make start`: a boot must not escalate privileges on its
+own.
+
+`80` is the value when the challenge listener is enabled (it binds
+`:80`, so the floor must be `80`); a deployment with external issuance
+disabled sets `443` instead. The kernel default is `1024` on most
+distributions, so an un-configured dev host fails `TcpListener::bind` on
+`:443` with `EACCES`.
+
+**The appliance needs neither.** `core-appliance/Dockerfile` carries no
+`USER` directive, so the container's captain and children start as root
+and bind low ports directly; the published entry ports stay
+`127.0.0.1:443` and `127.0.0.1:18000` (`docker-compose.core.yml`).
+
+**The port itself is not operator-configurable by design.** The ingress
+stays on `443`; discovery, the issuer, DPoP `htu`, cookies, and every
+SDK URL builder derive scheme-default URLs, so a moved port silently
+breaks OIDC discovery (proxy DESIGN §5 and §8 invariant 1). Access on
+another port is a host-level mapping decision (NAT, `docker-compose`
+publish, or the Windows `netsh portproxy`), never a change to the
+listener.
+
+The dev Makefile targets assert the precondition instead of surfacing a
+bare `EACCES` at boot: a check refuses to start with the exact
+`sysctl` remedy when `ip_unprivileged_port_start` is above the ingress
+port.
+
 ## 5. Invariants
 
 1. `manifest.yaml` is the single source of truth - install files and
@@ -85,12 +176,27 @@ The deb is what an OpenTofu module installs on a provisioned machine:
    real values land at provision time (module-owned).
 5. FHS paths are declared once and consumed by every repo's runtime
    defaults.
+6. **Low-port binding is a granted capability, never a root process and
+   never a file xattr.** The unit grants
+   `CAP_NET_BIND_SERVICE` (bounding set + ambient) so the unprivileged
+   `sentin8` user holds `:443`/`:80`; `setcap` is inert under
+   `NoNewPrivileges=yes` (§4.1).
+7. **The ingress port is a protocol constant, not a knob.** `443` is the
+   value every consumer's URL derivation assumes (§4.1); non-443 access
+   is a host-level mapping decision.
 
 ## 6. Testing Strategy
 
 - Lintian + `dpkg-deb --info` smoke on built debs.
 - Install test in a container: postinst user/dir creation, service unit
   presence, `sentin8-cli` on PATH.
+- **Ingress-bind assertion (PORTBIND-1)**: the unit's
+  `CapabilityBoundingSet`/`AmbientCapabilities` carry
+  `CAP_NET_BIND_SERVICE`, and an install test starts the unit as
+  `User=sentin8` and asserts `sentin8-proxy` holds `:443` with
+  `CapEff` containing `cap_net_bind_service` in `/proc/<pid>/status`.
+  A `NoNewPrivileges=yes` + file-xattr combination is deliberately NOT
+  tested - it is documented as inoperative (§4.1), not supported.
 - Deliberately NOT tested here: actual service behavior (service repos'
   suites cover it).
 

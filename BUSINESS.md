@@ -55,6 +55,7 @@ reviewable. The business value it delivers:
 | Dev-kit fidelity | The vendored registry pins match the platform SDK tag - dev and packaged builds share the same dependency-resolution model |
 | Predictable paths | Every runtime assumption (log dir, secrets dir, TLS state, run dir) is one FHS contract - no per-service path drift |
 | Bring-up consumption | The provisioning module kit installs these debs verbatim; packaging's unit + env-file contract is the machine's entire bring-up surface |
+| Ingress bind privilege | The packaged host serves `443` (and `80` when external issuance is on) as an unprivileged system user - the capability is granted by the unit, so no service runs as root and no operator step is needed beyond `apt install` |
 
 ## 4. Business Events (Outbound)
 
@@ -74,6 +75,13 @@ bring-up contract consumed by the OpenTofu modules.
    coherence is invariant.
 5. **FHS paths are the contract** - repos may default to them but may
    not invent new ones.
+6. **The edge is privileged by capability, not by root** - the ingress
+   binds `443`/`80` as the unprivileged `sentin8` user through a
+   capability the unit grants; no service process is root, and no
+   install step beyond the package is required.
+7. **The ingress port is not a customer knob** - `443` is fixed by the
+   protocol contracts the platform's URLs assume; reach on another port
+   is a network-mapping decision, not a package setting.
 
 ## 6. Target-User Roles & Use Cases
 
@@ -109,11 +117,14 @@ bring-up contract consumed by the OpenTofu modules.
    present, user created, unit installed, env template in place.
 2. Starting the unit brings up captain; placement/telemetry behavior
    follows the operator env file.
-3. `apt install sentin8-dev` lets a vertical workspace build offline
+3. The unit's service account holds `443` (and `80` when enabled)
+   without root: the proxy listener is up and the fleet serves its
+   ingress immediately after install, with no `setcap`/`sysctl` step.
+4. `apt install sentin8-dev` lets a vertical workspace build offline
    against the vendored registry.
-4. `manifest.yaml`-only changes regenerate correct control/install
+5. `manifest.yaml`-only changes regenerate correct control/install
    files.
-5. No package ships a secret value; lintian passes clean.
+6. No package ships a secret value; lintian passes clean.
 
 ## 10. Open Business Questions
 
